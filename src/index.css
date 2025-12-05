@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* Local font */
+@font-face {
+  font-family: 'DeterminationSansWeb';
+  src: url('./fonts/DeterminationMonoWebRegular-Z5oq.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Utility class */
+.font-determination {
+  font-family: 'Determination Mono Web', monospace !important;
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-35px) rotate(10deg); }
+}
+
+.animate-float {
+  animation: float linear infinite;
+}
+
+/* Global font — DeterminationSansWeb as main, fallback to Mono */
+*, *::before, *::after {
+  font-family: 'DeterminationSansWeb', 'Determination Mono Web', monospace !important;
+}
