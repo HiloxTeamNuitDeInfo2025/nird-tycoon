@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import api from "../api/client";
 
 const AuthContext = createContext();
 
@@ -7,62 +6,65 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if user is already logged in (on app load)
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      setUser({ token });
-    }
+    const saved = localStorage.getItem("nird_user");
+    if (saved) setUser(JSON.parse(saved));
     setLoading(false);
   }, []);
 
   const login = async (email, password) => {
-    const { data } = await api.post("/auth/login", { email, password });
-    localStorage.setItem("token", data.token);
-    setUser({ token: data.token });
-    return data;
+    const users = JSON.parse(localStorage.getItem("nird_users") || "[]");
+    const found = users.find(u => u.email === email && u.password === password);
+    if (!found) throw new Error("Mauvais email ou mot de passe");
+
+    const userData = { ...found, token: "fake" };
+    localStorage.setItem("nird_user", JSON.stringify(userData));
+    setUser(userData);
   };
 
-const register = async (firstname, lastname, email, password) => {
-    // 1. Register
-    await api.post("/auth/register", {
-      firstname: firstname.trim(),
-      lastname: lastname.trim(),
-      email: email.trim(),
-      password,
-    });
+  const register = async (firstname, lastname, email, password) => {
+    let users = JSON.parse(localStorage.getItem("nird_users") || "[]");
 
-    // 2. Auto-login
-    await login(email, password);
-
-    // 3. SET ROLE TO INITIAL — AUTOMATICALLY
-    try {
-      await api.patch("/user/current/setrole", {
-        role: "INITIAL",
-        isProprietary: true // or false — doesn't matter at start
-      });
-      console.log("Role set to INITIAL");
-    } catch (err) {
-      console.warn("Could not set initial role — will be set later");
+    if (users.find(u => u.email === email)) {
+      throw new Error("Cet email existe déjà");
     }
+
+    const newUser = {
+      id: Date.now(),
+      firstname,
+      lastname,
+      email,
+      password,
+      role: "INITIAL",
+      isProprietary: true
+    };
+
+    users.push(newUser);
+    localStorage.setItem("nird_users", JSON.stringify(users));
+
+    // auto-login
+    const userData = { ...newUser, token: "fake" };
+    localStorage.setItem("nird_user", JSON.stringify(userData));
+    setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem("nird_user");
     setUser(null);
-    window.location.href = "/";
   };
 
-  const value = {
-    user,
-    login,
-    register,
-    logout,
-    isAuthenticated: !!user,
-    loading,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{
+      user,
+      login,
+      register,
+      logout,
+      isAuthenticated: !!user,
+      loading
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export const useAuth = () => useContext(AuthContext);
